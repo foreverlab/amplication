@@ -1,0 +1,9 @@
+{
+  "name": "amplocal",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/amplocal/src",
+  "projectType": "application",
+  "implicitDependencies": ["data-service-generator"],
+  "targets": {},
+  "tags": []
+}
