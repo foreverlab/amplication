@@ -17,13 +17,13 @@
     "/oclif.manifest.json"
   ],
   "dependencies": {
-    "@amplication/data-service-generator": "^1.1.9",
     "@oclif/core": "^1.23.0",
     "@oclif/plugin-help": "^5",
-    "@oclif/plugin-plugins": "^2.1.12"
+    "@oclif/plugin-plugins": "^2.1.12",
+    "@amplication/code-gen-types": "*",
+    "@amplication/data-service-generator": "*"
   },
   "devDependencies": {
-    "@amplication/code-gen-types": "^1.1.7",
     "@oclif/test": "^2.2.19",
     "@types/chai": "^4",
     "@types/mocha": "^9.0.0",
@@ -55,6 +55,7 @@
     }
   },
   "scripts": {
+    "dev": "./bin/dev gen specs/project/services/food-svc/ -o specs/output",
     "build": "shx rm -rf dist && tsc -b",
     "lint": "eslint . --ext .ts --config .eslintrc",
     "postpack": "shx rm -f oclif.manifest.json",

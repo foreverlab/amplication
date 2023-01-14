@@ -201,6 +201,12 @@ function resolveLookupFields(entities: Entity[]): Entity[] {
           const relatedFieldProperties =
             relatedField.properties as types.Lookup;
 
+          if (!relatedFieldProperties) {
+            throw new Error(
+              `Related field with the ID ${relatedFieldId} (${relatedEntity.name}.${relatedField.name}) does not have a properties field of type Lookup`
+            );
+          }
+
           const isOneToOne =
             !fieldProperties.allowMultipleSelection &&
             !relatedFieldProperties.allowMultipleSelection;

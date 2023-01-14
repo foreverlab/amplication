@@ -61,8 +61,6 @@ generating lots of code...
         JSON.stringify(resourceData, null, 2)
       );
 
-      // todo: related field ids refer to "permanentId", whereas the other ids do not
-
       const modules = await createDataService(resourceData, defaultLogger);
       await this.writeModules(modules, destination);
       console.log("Code generation completed successfully");
@@ -77,10 +75,13 @@ generating lots of code...
     const entityDir = path.join(dir, "entities");
     const roleDir = path.join(dir, "roles");
 
+    let entities = await this.readInputJsonDir<Entity>(entityDir, "Entity");
+    entities = this.mapPermanentIds(entities);
+
     const result: DSGResourceData = {
       resourceType: "Service",
       resourceInfo: await this.readInputJson<AppInfo>(resourceFile, "AppInfo"),
-      entities: await this.readInputJsonDir<Entity>(entityDir, "Entity"),
+      entities: entities,
       roles: await this.readInputJsonDir<Role>(roleDir, "Role"),
       pluginInstallations: await this.readInputJson<PluginInstallation[]>(
         pluginFile,
@@ -89,6 +90,23 @@ generating lots of code...
     };
 
     return result;
+  }
+
+  // amplication uses permanentIds as references in relationships for fields
+  // so we are just duplcicating the id into that field
+  mapPermanentIds(entities: Entity[]): Entity[] {
+    return entities.map((e) => {
+      const ent = {
+        ...e,
+      };
+
+      ent.fields = ent.fields.map((f) => ({
+        ...f,
+        permanentId: f.id,
+      }));
+
+      return ent;
+    });
   }
 
   async readInputJsonDir<T>(dirPath: string, type: string): Promise<T[]> {
