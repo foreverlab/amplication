@@ -1,0 +1,67 @@
+{
+  "name": "amplication-amplocal",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/amplication-amplocal/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "@nrwl/webpack:webpack",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "target": "node",
+        "compiler": "tsc",
+        "outputPath": "dist/packages/amplication-amplocal",
+        "main": "packages/amplication-amplocal/src/main.ts",
+        "tsConfig": "packages/amplication-amplocal/tsconfig.app.json",
+        "assets": ["packages/amplication-amplocal/src/assets"]
+      },
+      "configurations": {
+        "production": {
+          "optimization": true,
+          "extractLicenses": true,
+          "inspect": false,
+          "fileReplacements": [
+            {
+              "replace": "packages/amplication-amplocal/src/environments/environment.ts",
+              "with": "packages/amplication-amplocal/src/environments/environment.prod.ts"
+            }
+          ]
+        }
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ts-node -P tsconfig.app.json -r tsconfig-paths/register ./src/main.ts ",
+        "cwd": "packages/amplication-amplocal"
+      }
+    },
+    "serve": {
+      "executor": "@nrwl/js:node",
+      "options": {
+        "buildTarget": "amplication-amplocal:build"
+      },
+      "configurations": {
+        "production": {
+          "buildTarget": "amplication-amplocal:build:production"
+        }
+      }
+    },
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["packages/amplication-amplocal/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["{workspaceRoot}/coverage/{projectRoot}"],
+      "options": {
+        "jestConfig": "packages/amplication-amplocal/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  },
+  "tags": []
+}
