@@ -58,6 +58,13 @@
       },
       "dependsOn": ["generate-example-input-json"]
     },
+    "generate-custom-code": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "ts-node -P tsconfig.app.json -r tsconfig-paths/register ./src/main.ts ",
+        "cwd": "packages/amplication-data-service-generator-runner"
+      }
+    },
     "docker:build": {
       "executor": "@nx-tools/nx-docker:build",
       "options": {

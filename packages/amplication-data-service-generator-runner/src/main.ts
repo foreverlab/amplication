@@ -4,11 +4,15 @@ import {
   defaultLogger,
   httpClient,
 } from "@amplication/data-service-generator";
-import { mkdir, readFile, writeFile } from "fs/promises";
+import { existsSync } from "fs";
+import { lstat, mkdir, readFile, writeFile } from "fs/promises";
 import { dirname, join } from "path";
+import { readInputJsonDir } from "./fromDirectory";
 
 const buildSpecPath = process.env.BUILD_SPEC_PATH;
 const buildOutputPath = process.env.BUILD_OUTPUT_PATH;
+const skipHttpClient: boolean =
+  process.env.SKIP_HTTP === "TRUE" || process.env.SKIP_HTTP === "true";
 
 if (!buildSpecPath) {
   throw new Error("SOURCE is not defined");
@@ -32,33 +36,47 @@ export default async function generateCode(
   destination: string
 ): Promise<void> {
   try {
-    const resourceData = await readInputJson(source);
+    if (!existsSync(source)) {
+      throw new Error(`Source '${source}' does not exist`);
+    }
+
+    let resourceData: DSGResourceData = null;
+    const stat = await lstat(source);
+    if (stat.isDirectory()) {
+      resourceData = await readInputJsonDir(source);
+    } else {
+      resourceData = await readInputJson(source);
+    }
 
     const modules = await createDataService(resourceData, defaultLogger);
     await writeModules(modules, destination);
     console.log("Code generation completed successfully");
-    await httpClient.post(
-      new URL(
-        "build-runner/code-generation-success",
-        process.env.BUILD_MANAGER_URL
-      ).href,
-      {
-        resourceId: process.env.RESOURCE_ID,
-        buildId: process.env.BUILD_ID,
-      }
-    );
+    if (!skipHttpClient) {
+      await httpClient.post(
+        new URL(
+          "build-runner/code-generation-success",
+          process.env.BUILD_MANAGER_URL
+        ).href,
+        {
+          resourceId: process.env.RESOURCE_ID,
+          buildId: process.env.BUILD_ID,
+        }
+      );
+    }
   } catch (err) {
     console.error(err);
-    await httpClient.post(
-      new URL(
-        "build-runner/code-generation-failure",
-        process.env.BUILD_MANAGER_URL
-      ).href,
-      {
-        resourceId: process.env.RESOURCE_ID,
-        buildId: process.env.BUILD_ID,
-      }
-    );
+    if (!skipHttpClient) {
+      await httpClient.post(
+        new URL(
+          "build-runner/code-generation-failure",
+          process.env.BUILD_MANAGER_URL
+        ).href,
+        {
+          resourceId: process.env.RESOURCE_ID,
+          buildId: process.env.BUILD_ID,
+        }
+      );
+    }
   }
 }
 
