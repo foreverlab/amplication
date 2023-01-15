@@ -7,16 +7,18 @@ import {
 import { existsSync } from "fs";
 import { lstat } from "fs/promises";
 import { JsonDb } from "./JsonDb";
+import { prompt } from "enquirer";
+import { boolean } from "@amplication/code-gen-types/schemas";
 
 console.log("AMPLOCAL...");
 
 let args = process.argv;
 
 // remove nx dev args
-if (args[0].endsWith("ts-node")) {
-  args = args.slice(2);
-  console.log("Args", args);
-}
+// if (args[0].endsWith("ts-node")) {
+args = args.slice(2);
+// }
+// console.log("Args", args);
 
 const buildSpecPath: string = args[0];
 
@@ -35,13 +37,18 @@ export default async function validateJSON(source: string): Promise<void> {
     throw new Error("Source must be a directory");
   }
 
-  const jsonDb: JsonDb = new JsonDb(source, (msg) => console.info(msg));
+  const log = (msg: string) => {
+    // do nothing
+  };
+  // const log = (msg: string) => console.info(msg);
+  const jsonDb: JsonDb = new JsonDb(source, log);
   await jsonDb.load();
 
-  validateEntities(jsonDb.definitiion.entities);
+  await validateEntities(jsonDb);
 }
 
-function validateEntities(ents: Entity[]): string[] {
+async function validateEntities(jsonDb: JsonDb): Promise<string[]> {
+  const ents: Entity[] = jsonDb.definitiion.entities;
   const errs: string[] = [];
   const entsById: Map<string, Entity> = new Map();
   const fieldsById: Map<string, { entity: Entity; field: EntityField }> =
@@ -74,18 +81,85 @@ function validateEntities(ents: Entity[]): string[] {
 
   for (let i = 0; i < ents.length; i++) {
     const ent: Entity = ents[i];
-    console.info(`Validating Entity: ${ent.name}`);
+    // console.log(`Validating Entity: ${ent.name}`);
 
-    ent.fields.map((f) => {
+    for (let n = 0; n < ent.fields.length; n++) {
+      // ent.fields.map(async (f) => {
+      const f = ent.fields[n];
       if (f.dataType === EnumDataType.Lookup) {
         const props: types.Lookup = f.properties as types.Lookup;
         if (!props) {
-          console.error(
-            `Lookup properties not found for ${ent.name}.${f.name}`
+          // console.info(`Lookup properties not found for ${ent.name}.${f.name}`);
+          console.info(`\n ### ${ent.name}.${f.name} ###`);
+          console.info(
+            `  > This field needs to point to a related field containing the related objects.
+  > e.g. city.countryId => country.cities
+  > Let's figure out what ${f.name} on ${ent.name} should point to...\n`
           );
+
+          console.info(
+            `  [Hint: Id fields probably don't need multiple selection]`
+          );
+          const resp: { multiSelection: boolean } = await prompt({
+            type: "confirm",
+            name: "multiSelection",
+            message: `Allow Multiple Selection for ${ent.name}.${f.name}?`,
+          });
+          // console.log("Multi: ", resp.multiSelection);
+
+          const entResp: { entity: string } = await prompt({
+            type: "select",
+            name: "entity",
+            message: `On which entity is '${f.name}'?`,
+            choices: ents.map((nt) => nt.name),
+          });
+          // console.log("Ent: ", entResp.entity);
+
+          if (resp.multiSelection) {
+            console.info(`  [Hint: The field might be '${ent.name} + ID']`);
+          } else {
+            console.info(
+              `  [Hint: The field might be the plural version of ${ent.name}]`
+            );
+          }
+
+          const foundEnt = ents.find((nt) => nt.name === entResp.entity);
+          const fieldResp: { field: string } = await prompt({
+            type: "select",
+            name: "field",
+            message: `Which field on ${entResp.entity}?`,
+            choices: foundEnt.fields.map((f) => f.name),
+          });
+
+          const foundField = foundEnt.fields.find(
+            (f) => f.name === fieldResp.field
+          );
+          const props: types.Lookup = {
+            allowMultipleSelection: resp.multiSelection,
+            relatedEntityId: foundEnt.id,
+            relatedFieldId: foundField.id,
+          };
+          f.properties = props;
+
+          console.info(`\nFinal Field: ${JSON.stringify(f, null, 2)}`);
+
+          const saveResp: { save: boolean } = await prompt({
+            type: "confirm",
+            name: "save",
+            message: "Should we write this to file?",
+          });
+
+          if (saveResp.save) {
+            console.info(`Saving entity '${ent.name}' (${ent.id})\n`);
+            const newEnt: Entity = jsonDb.updateField(ent, f);
+            await jsonDb.saveEntity(newEnt);
+          } else {
+            console.info("Okay. Skipping save. Moving on...\n");
+          }
         }
       }
-    });
+      // });
+    }
   }
 
   return errs;

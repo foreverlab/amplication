@@ -2,11 +2,30 @@ import {
   AppInfo,
   DSGResourceData,
   Entity,
+  EntityField,
   PluginInstallation,
   Role,
 } from "@amplication/code-gen-types";
-import { readdir, readFile } from "fs/promises";
+import { readdir, readFile, writeFile } from "fs/promises";
 import { join } from "path";
+
+function getStringSortFn<T>(
+  getter: (obj: T) => string
+): (a: T, b: T) => number {
+  return (a: T, b: T) => stringSortFn(getter(a), getter(b));
+}
+
+function stringSortFn(a: string, b: string): number {
+  if (a > b) {
+    return 1;
+  }
+
+  if (a < b) {
+    return -1;
+  }
+
+  return 0;
+}
 
 // amplication uses permanentIds as references in relationships for fields
 // so we are just duplcicating the id into that field
@@ -47,8 +66,28 @@ export class JsonDb {
 
   constructor(private rootDir: string, private log: (msg: string) => void) {}
 
+  updateField(entity: Entity, field: EntityField): Entity {
+    const fields: EntityField[] = entity.fields.filter(
+      (f) => f.id !== field.id
+    );
+    fields.push(field);
+
+    const result: Entity = {
+      ...entity,
+      fields: fields.sort(getStringSortFn((e) => e.name)),
+    };
+
+    return result;
+  }
+
+  async saveEntity(data: Entity): Promise<void> {
+    this.write(data, "entities");
+  }
+
   async write<T>(data: T, type: keyof DSGResourceData): Promise<void> {
-    // this.log(`Writing ${type} to file with key ${}`)
+    const id: string = getKey(data, type);
+    const filePath: string = this.filesByKey.get(id);
+    await writeFile(filePath, JSON.stringify(data, null, 2));
   }
 
   async load(): Promise<void> {

@@ -87,6 +87,7 @@
     "dir-compare": "^4.0.0",
     "dockerode": "^3.3.4",
     "dotenv": "^16.0.0",
+    "enquirer": "^2.3.6",
     "eventsource": "^2.0.2",
     "formik": "^2.2.9",
     "fs-extra": "^9.1.0",
