@@ -178,6 +178,12 @@ function resolveLookupFields(entities: Entity[]): Entity[] {
         if (field.dataType === EnumDataType.Lookup) {
           const fieldProperties = field.properties as types.Lookup;
 
+          if (!fieldProperties) {
+            throw new Error(
+              `Field with the ID ${field.id} (${entity.name}.${field.name}) does not have a properties field of type Lookup`
+            );
+          }
+
           const { relatedEntityId, relatedFieldId } = fieldProperties;
           if (!relatedEntityId) {
             throw new Error(
@@ -204,6 +210,12 @@ function resolveLookupFields(entities: Entity[]): Entity[] {
 
           const relatedFieldProperties =
             relatedField.properties as types.Lookup;
+
+          if (!relatedFieldProperties) {
+            throw new Error(
+              `Related field with the ID ${relatedFieldId} (${relatedEntity.name}.${relatedField.name}) does not have a properties field of type Lookup`
+            );
+          }
 
           const isOneToOne =
             !fieldProperties.allowMultipleSelection &&
